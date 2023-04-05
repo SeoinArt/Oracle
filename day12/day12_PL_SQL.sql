@@ -1,4 +1,5 @@
 # PL/SQL의 제어문
+# PL/SQL의 제어문
 ----------------------------------------------------------------------------------- IF ANS
 [1]  IF문
 
@@ -184,13 +185,154 @@ EXECUTE IMPLICIT_CUSOR(7788);
 
 ROLLBACK;
 
+--------------------------------------------------------------------------------
+여러 건의 데이터를 SELECT 하는 문장에 암시적 커서를 사용하면
+TOO_MANY_ROWS 에러를 발생시킨다.
+=> 이 경우는 명시적 커서를 사용해야 한다.
+
+CREATE OR REPLACE PROCEDURE DEPT_ALL
+IS 
+    VNO NUMBER;
+    VNAME VARCHAR2(30);
+    VLOC VARCHAR2(30);
+BEGIN
+    SELECT DEPTNO, DNAME, LOC
+    INTO VNO, VNAME, VLOC
+    FROM DEPT;
+END;
+/
+EXECUTE DEPT_ALL;
 
 
+--------------------------------------------------------------------------------
+명시적 커서를 이용해서 문제를 해결해봅시다
+선언문에서 
+CURSOR 커서명 IS SELECT ANS;
+
+실행문에서 OPEN 커서명;
+반복문을 이용해서 FETCH를 해야함
+CLOSE 커서명;
 
 
+CREATE OR REPLACE PROCEDURE DEPT_ALL
+IS 
+    VNO NUMBER;
+    VNAME VARCHAR2(30);
+    VLOC VARCHAR2(30);
+    -- 커서 이름
+    CURSOR DCR IS SELECT DEPTNO, DNAME, LOC FROM DEPT;
+BEGIN
+-- 커서 OPEN
+OPEN DCR;
+   LOOP
+        FETCH DCR INTO VNO,VNAME, VLOC;
+        EXIT WHEN DCR%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(VNO ||'  ' ||RPAD(VNAME,12,' ') || VLOC );
+    END LOOP;
+CLOSE DCR;
+END;
+/
+
+EXECUTE DEPT_ALL();
+
+DESC DEPT;
+DESC EMP;
+--------------------------------------------------------------------------------
+부서별 해당 부서의 부서명과 사원수와 평균 급여를 가져오는 프로시저 생성
+
+CREATE OR REPLACE PROCEDURE DEPT_AVG_SAL
+IS
+VDNO DEPT.DEPTNO%TYPE;
+VNAME DEPT.DNAME%TYPE;
+VCNT NUMBER;
+VAVG_SAL NUMBER;
+
+CURSOR DCR IS
+    SELECT DNAME, COUNT(*), ROUND(AVG(SAL),2)
+    FROM EMP E JOIN DEPT D
+    ON E.DEPTNO = D.DEPTNO
+    GROUP BY DNAME;        
+BEGIN
+    OPEN DCR;
+    LOOP
+        FETCH DCR INTO VNAME, VCNT, VAVG_SAL;
+        EXIT WHEN DCR%NOTFOUND;
+        SELECT DEPTNO INTO VDNO
+        FROM DEPT WHERE DNAME=VNAME;
+        
+        DBMS_OUTPUT.PUT_LINE('부서명:  ' || VNAME || '  사원수 : '||VCNT || ' 부서번호: ' || VDNO || ' 평균 급여: '|| VAVG_SAL);
+    END LOOP;
+    CLOSE DCR;
+END;
+/
+EXECUTE DEPT_AVG_SAL;
+
+--------------------------------------------------------------------------------
+- for 루프에서 커서 사용
+- for 루프에서 서브 쿼리 사용
+
+create or replace procedure forcut
+()
+is
+-- 커서 선언
+cursor pcr is 
+select  products_name, output_price
+from products 
+order by 1;
+--vname products.products_name%type; 
+--vprice number;
+begin
+-- for 루프에서 커서 사용(open, fetch, close를 알아서 함)
+    for p in pcr loop -- p qustn recode 타입
+        dbms_output.put_line(rpad(p.products_name,14,' ')||to_char(p.output_price,'l999,999,999'));
+    end loop;
+end;
+/
+
+exec forcur();
 
 
+--------------------------------------------------------------------------------
+for in 루프문에 subquery 사용
+- cursor를 선언할 필요가 없음
+- for 변수 in(subquery)loop 
+    실행문
+  end loop;
+  
+  
+--------------------------------------------------------------------------------
+미리 정의된 예외처리
 
+create or replace procedure except_test(vdno in number, veno in number, vname in varchar2)
+is
+    vemp emp%rowtype;
+begin
+    insert into emp(empno, ename, deptno)
+    values(vdno, vname, veno);
+    
+    
+   /*select empno, ename, deptno
+    into vemp.empno, vemp.ename, vemp.deptno
+    from emp
+    where deptno = vdno;
+    */
+    
+    for k in (select empno,ename,deptno from emp where deptno = vdno) loop 
+    
+    
+    dbms_output.put_line('사번 : ' || k.empno);
+    dbms_output.put_line('이름 : ' || k.ename);
+    dbms_output.put_line('부서 번호: ' || k.deptno);
+    
+    end loop;
+    
+    exception
+    when too_many_rows then
+        dbms_output.put_line('데이터가 2건 이상이에요, 커서를 이용하세요');
+end;
+/
 
+exec except_test(10,1000,'PETER');
+select * from emp;
 
 
