@@ -1,0 +1,24 @@
+DESC MEMO;
+SELECT * FROM MEMO;
+
+-- 일련번호를 생성하는 객체 : SEQUENCE          
+
+CREATE SEQUENCE 시퀀스명 
+START WITH 시작수
+INCREMENT BY 증가값;
+[그 외 옵션]
+
+CREATE SEQUENCE MEMO_SEQ
+START WITH 1
+INCREMENT BY 1;
+
+-- 시퀸스 속성 
+-- NEXTVAL : 다음에 증가할 값을 반환
+-- CURRVAL : 현재 가지고 있는 값을 반환 => CURRVAL의 경우는 NEXTVAL이 호출된 후에 사용할 수 있다.
+
+INSERT INTO MEMO(NO,NAME,MSG) VALUES (MEMO_SEQ.NEXTVAL,'김철수','반갑습니다'); 
+INSERT INTO MEMO(NO,NAME,MSG) VALUES (MEMO_SEQ.NEXTVAL,'김철수','반갑습니다'); 
+SELECT * FROM MEMO;
+
+SELECT MEMO_SEQ.CURRVAL FROM DUAL;
+COMMIT;
