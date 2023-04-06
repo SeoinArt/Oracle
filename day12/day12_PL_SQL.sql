@@ -303,36 +303,40 @@ for in 루프문에 subquery 사용
 --------------------------------------------------------------------------------
 미리 정의된 예외처리
 
-create or replace procedure except_test(vdno in number, veno in number, vname in varchar2)
-is
-    vemp emp%rowtype;
-begin
-    insert into emp(empno, ename, deptno)
-    values(vdno, vname, veno);
+CREATE OR REPLACE PROCEDURE EXCEPT_TEST
+(VDNO IN NUMBER, VENO IN NUMBER, VNAME IN VARCHAR2)
+IS
+    VEMP EMP%ROWTYPE;
+BEGIN
+    INSERT INTO EMP(EMPNO,ENAME,DEPTNO)
+    VALUES(VENO, VNAME, VDNO);
     
-    
-   /*select empno, ename, deptno
-    into vemp.empno, vemp.ename, vemp.deptno
-    from emp
-    where deptno = vdno;
-    */
-    
-    for k in (select empno,ename,deptno from emp where deptno = vdno) loop 
-    
-    
-    dbms_output.put_line('사번 : ' || k.empno);
-    dbms_output.put_line('이름 : ' || k.ename);
-    dbms_output.put_line('부서 번호: ' || k.deptno);
-    
-    end loop;
-    
-    exception
-    when too_many_rows then
-        dbms_output.put_line('데이터가 2건 이상이에요, 커서를 이용하세요');
-end;
+   /* SELECT EMPNO,ENAME,DEPTNO
+    INTO VEMP.EMPNO, VEMP.ENAME, VEMP.DEPTNO
+    FROM EMP
+    WHERE DEPTNO = VDNO;        */
+    FOR K IN (SELECT EMPNO,ENAME,DEPTNO FROM EMP WHERE DEPTNO=VDNO) LOOP    
+        DBMS_OUTPUT.PUT_LINE('--------------------------');
+        DBMS_OUTPUT.PUT_LINE('사번: '||K.EMPNO);
+        DBMS_OUTPUT.PUT_LINE('이름: '||K.ENAME);
+        DBMS_OUTPUT.PUT_LINE('부서번호: '||K.DEPTNO);    
+    END LOOP;
+    DBMS_OUTPUT.PUT_LINE(10/0);
+    EXCEPTION
+    WHEN TOO_MANY_ROWS THEN
+        DBMS_OUTPUT.PUT_LINE('데이터가 2건 이상이에요. 커서를 이용하세요');
+    WHEN DUP_VAL_ON_INDEX THEN
+        DBMS_OUTPUT.PUT_LINE(VENO||'번 사원은 이미 있습니다');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('기타 에러 발생: ' || SQLERRM || ' ' || SQLCODE);
+        
+END;
 /
-
-exec except_test(10,1000,'PETER');
-select * from emp;
-
-
+DESC EMP;
+EXEC EXCEPT_TEST(10,1000,'PETER');
+EXEC EXCEPT_TEST(10,1001,'SUSAN');
+DELETE EMP WHERE EMPNO =8100;
+COMMIT;
+SELECT * FROM EMP WHERE DEPTNO = 10;
+SELECT * FROM EMP ORDER BY EMPNO;
+ALTER TABLE EMP ADD CONSTRAINT EMP_EMPNO_UK UNIQUE(EMPNO);
