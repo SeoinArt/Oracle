@@ -343,7 +343,7 @@ declare
 begin
     update myproduct set pqty = pqty+:new.inqty - :old.inqty
     where pcode = :new.pcode_fk;
-    DBMS_OUTPUT.PUT_LINE('수정되었습니다');
+    DBMS_OUTPUT.PUT_LINE(:new.pcode_fk||'가 수정되었습니다');
 end;
 /
 
@@ -354,22 +354,67 @@ select * from my
 --상품 테이블의 수량을 수정하는 트리거를 작성하세요
 -- :OLD.INQTY를 차감함
 
-create or replace trigger trg_myinput_delete
-after delete on myinput
-for each row
+CREATE OR REPLACE TRIGGER TRG_INPUT_PRODUCT3
+AFTER DELETE ON MYINPUT
+FOR EACH ROW
+DECLARE
+BEGIN
+UPDATE MYPRODUCT SET PQTY=PQTY-:OLD.INQTY
+WHERE PCODE=:OLD.PCODE_FK;
+DBMS_OUTPUT.PUT_LINE('OLD: '||:OLD.INQTY||'수량이 차감되었음');
+END;
+/
+--------------------------------------
+SELECT * FROM MYPRODUCT;
+SELECT * FROM MYINPUT;
+
+DELETE FROM MYINPUT WHERE INCODE=3;
+SELECT * FROM MYPRODUCT;
+rollback;
+COMMIT;
+
+
+--[트리거 실습2] - 문장 트리거
+--EMP 테이블에 신입사원이 들어오면(INSERT) 로그 기록을 남기자
+--어떤 DML문장을 실행했는지, DML이 수행된 시점의 시간, USER 데이터를
+--EMP_LOG테이블에 기록하자
+
+
+create table emp_log(
+    log_code number primary key,
+    user_id varchar2(30),
+    log_date date default sysdate,
+    behavior varchar2(20)
+);
+
+desc emp_log;
+
+create sequence emp_log_seq nocache;
+
+select to_char(sysdate,'dy')from dual; -- 요일 출력 확인
+-------------------------------------------------
+create or replace trigger trg_emp_log
+before insert on emp
 declare
 begin
-    update myproduct set pqty = pqty - :old.inqty
-    where pcode = :new.pcode_fk;
-    DBMS_OUTPUT.PUT_LINE('수정되었습니다');
+    if(to_char(sysdate,'dy')) in ('목','금','토','일') then
+        raise_application_error(-20001,'목,금,토,일요일에는 입력 작업을 할 수 없어요');
+    
+    else
+        insert into emp_log(log_code,user_id,log_date,behavior) 
+        values(emp_log_seq.nextval,user,sysdate,'insert');
+        DBMS_OUTPUT.PUT_LINE('1');
+
+    end if;
 end;
 /
 
-select * from myinput;
-DELETE FROM MYINPUT WHERE PCODE_FK = 'A001';
-select * from myproduct;
+--------------------------------------------------------------------------------
+-- emp에 사번, 사원명, 부서번호, 입사일을 새로 insert하세요
 
+desc emp;
+insert into emp(empno,ename,deptno,hiredate) values(9034,'THOMAS',30,sysdate);
 
+ROLLBACK;
 
-
-
+SELECT * FROM EMP_LOG;
